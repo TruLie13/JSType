@@ -46,6 +46,7 @@ function traverseDirectory(directory, options) {
         if (!skipped) {
           results.push({ file: fullPath, typeChecks: typeChecksPerformed });
           totalTypeChecks += typeChecksPerformed;
+          totalFiles -= 1;
         }
         totalFiles++;
       }
