@@ -42,9 +42,11 @@ function traverseDirectory(directory, options) {
       if (stats.isDirectory()) {
         traverse(fullPath); // Recursively traverse subdirectories
       } else if (stats.isFile() && file.endsWith(".js")) {
-        const { typeChecksPerformed } = checkFile(fullPath, options); // Process JavaScript file
-        results.push({ file: fullPath, typeChecks: typeChecksPerformed });
-        totalTypeChecks += typeChecksPerformed;
+        const { typeChecksPerformed, skipped } = checkFile(fullPath, options); // Process JavaScript file
+        if (!skipped) {
+          results.push({ file: fullPath, typeChecks: typeChecksPerformed });
+          totalTypeChecks += typeChecksPerformed;
+        }
         totalFiles++;
       }
     });
@@ -65,7 +67,7 @@ function traverseDirectory(directory, options) {
 function checkFile(filename, options = {}) {
   if (!fs.existsSync(filename)) {
     console.log(chalk.red(`Error: File "${filename}" not found.`));
-    return { typeChecksPerformed: 0 };
+    return { typeChecksPerformed: 0, skipped: false };
   }
 
   const code = fs.readFileSync(filename, "utf8");
@@ -75,6 +77,12 @@ function checkFile(filename, options = {}) {
     // Enable comment parsing
     attachComments: true,
   });
+
+  // Check for /*: skip */ comment at the beginning of the file
+  if (hasSkipComment(ast.comments)) {
+    console.log(chalk.yellow(`Skipping ${filename} due to skip comment.`));
+    return { typeChecksPerformed: 0, skipped: true };
+  }
 
   let typeErrors = 0;
   let typeChecksPerformed = 0;
@@ -223,14 +231,22 @@ function checkFile(filename, options = {}) {
   if (typeErrors > 0) {
     console.log(chalk.red(`Found ${typeErrors} type error(s) in ${filename}`));
     process.exit(1);
-  } else {
+  } else if (!hasSkipComment(ast.comments)) {
     console.log(
       chalk.green(
         `Checked ${filename} successfully! (${typeChecksPerformed} type checks performed)`
       )
     );
   }
-  return { typeChecksPerformed };
+  return { typeChecksPerformed, skipped: false };
+}
+
+// Function to check if the file has the /*: skip */ comment
+function hasSkipComment(comments) {
+  if (!comments || comments.length === 0) {
+    return false;
+  }
+  return comments.some((comment) => comment.value.trim() === ": skip");
 }
 
 // Function to find type annotations in inline comments like /*: type */
