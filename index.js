@@ -17,10 +17,24 @@ program
   .argument("<file>", "JavaScript file to check")
   .option("-v, --verbose", "Show detailed type information")
   .action((file, options) => {
-    checkFile(file, options);
+    traverseDirectory(file, options);
   });
 
 program.parse(process.argv);
+
+// Function to traverse the directory and process each JS file
+function traverseDirectory(directory, options) {
+  fs.readdirSync(directory).forEach((file) => {
+    const fullPath = path.join(directory, file);
+    const stats = fs.statSync(fullPath);
+
+    if (stats.isDirectory()) {
+      traverseDirectory(fullPath, options); // Recursively traverse subdirectories
+    } else if (stats.isFile() && file.endsWith(".js")) {
+      checkFile(fullPath, options); // Process JavaScript file
+    }
+  });
+}
 
 // Function to check types
 function checkFile(filename, options = {}) {
