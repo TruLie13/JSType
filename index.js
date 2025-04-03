@@ -116,13 +116,12 @@ function checkFile(filename, options = {}) {
             )
           ) {
             const errorLocation = getLocationInfo(filename, declaration);
+            console.log(chalk.red(`❌ Type mismatch at ${errorLocation}:`));
             console.log(
-              chalk.red(
-                `❌ Type mismatch at ${errorLocation}:\n` +
-                  `  Variable: ${varName}\n` +
-                  `  Expected: ${expectedType}, Found: ${actualType}` +
-                  (typeValue !== null ? ` (${typeValue})` : "")
-              )
+              `  Variable: ${varName}\n` +
+                `  Expected: ${expectedType}, Found: ${actualType}` +
+                (typeValue !== null ? ` (${typeValue})` : "") +
+                `\n`
             );
             typeErrors++;
           } else if (options.verbose) {
@@ -192,12 +191,10 @@ function checkFile(filename, options = {}) {
             )
           ) {
             const errorLocation = getLocationInfo(filename, path.node);
+            console.log(chalk.red(`❌ Type mismatch at ${errorLocation}:`));
             console.log(
-              chalk.red(
-                `❌ Type mismatch at ${errorLocation}:\n` +
-                  `  Assignment to: ${varName}\n` +
-                  `  Expected: ${expectedType}, Found: ${actualType}`
-              )
+              `  Assignment to: ${varName}\n` +
+                `  Expected: ${expectedType}, Found: ${actualType} \n`
             );
             typeErrors++;
           } else if (options.verbose) {
