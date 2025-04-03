@@ -13,5 +13,5 @@ let none /*: undefined */ = void 0; // ✅ Matches undefined type
 
 // Type checking in assignments
 let count /*: number */ = 5;
-count /*: number */ = ; // ✅ Valid assignment
+count /*: number */ = 10; // ✅ Valid assignment
 count = "ten"; // ❌ Type mismatch error in assignment
