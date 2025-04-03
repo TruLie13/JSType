@@ -61,9 +61,8 @@ function checkFile(filename, options = {}) {
         if (!declaration.init) return; // Skip uninitialized variables
 
         const varName = declaration.id.name;
-        if (options.verbose) {
-          console.log("\nChecking variable:", varName);
-        }
+        let expectedType, actualType, typeValue;
+        let isComplex = false;
 
         // Extract type annotation from inline comments (/*: type */)
         const typeAnnotation = findTypeAnnotation(
@@ -74,10 +73,9 @@ function checkFile(filename, options = {}) {
 
         if (typeAnnotation) {
           typeChecksPerformed++;
-          const { expectedType, isComplex } =
-            parseTypeAnnotation(typeAnnotation);
-          let actualType = "unknown";
-          let typeValue = null;
+          ({ expectedType, isComplex } = parseTypeAnnotation(typeAnnotation));
+          actualType = "unknown";
+          typeValue = null;
 
           // Determine the actual type using Babel's AST node types
           if (t.isStringLiteral(declaration.init)) {
@@ -113,13 +111,6 @@ function checkFile(filename, options = {}) {
             actualType = "undefined";
           }
 
-          if (options.verbose) {
-            console.log(
-              `🔍 Expected Type: ${expectedType}, Actual Type: ${actualType}` +
-                (typeValue !== null ? `, Value: ${typeValue}` : "")
-            );
-          }
-
           // Compare types
           if (
             !isComplexTypeMatch(
@@ -138,21 +129,16 @@ function checkFile(filename, options = {}) {
                 `\n`
             );
             typeErrors++;
-          } else if (options.verbose) {
-            console.log(chalk.green(`✅ ${varName} matches expected type.`));
           }
-        } else if (options.verbose) {
-          console.log(
-            chalk.gray(`⚠️  No type annotation found for ${varName}.`)
-          );
         }
       });
     },
-
     AssignmentExpression(path) {
       // Check type for assignments like: x = value; (where x has a type annotation)
       if (t.isIdentifier(path.node.left)) {
         const varName = path.node.left.name;
+        let expectedType, actualType;
+        let isComplex = false;
 
         // Extract comment from the assignment
         const assignmentComment = findTypeAnnotationInAssignment(
@@ -162,9 +148,9 @@ function checkFile(filename, options = {}) {
 
         if (assignmentComment) {
           typeChecksPerformed++;
-          const { expectedType, isComplex } =
-            parseTypeAnnotation(assignmentComment);
-          let actualType = "unknown";
+          ({ expectedType, isComplex } =
+            parseTypeAnnotation(assignmentComment));
+          actualType = "unknown";
 
           // Determine the actual type
           if (t.isStringLiteral(path.node.right)) {
@@ -188,13 +174,6 @@ function checkFile(filename, options = {}) {
             actualType = "function";
           }
 
-          if (options.verbose) {
-            console.log(`\nChecking assignment to ${varName}`);
-            console.log(
-              `🔍 Expected Type: ${expectedType}, Actual Type: ${actualType}`
-            );
-          }
-
           // Compare types
           if (
             !isComplexTypeMatch(
@@ -211,10 +190,6 @@ function checkFile(filename, options = {}) {
                 `  Expected: ${expectedType}, Found: ${actualType} \n`
             );
             typeErrors++;
-          } else if (options.verbose) {
-            console.log(
-              chalk.green(`✅ Assignment to ${varName} matches expected type.`)
-            );
           }
         }
       }
