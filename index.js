@@ -91,6 +91,7 @@ function checkFile(filename, options = {}) {
   let typeErrors = 0;
   let typeChecksPerformed = 0;
   let skipRemaining = false; // Flag to skip remaining checks
+  const variableMap = new Map();
 
   const visitor = {
     VariableDeclaration(path) {
@@ -102,7 +103,7 @@ function checkFile(filename, options = {}) {
         return; // Skip if after the skip-remaining comment
       }
 
-      const { declarations } = path.node;
+      const { declarations, kind } = path.node;
       declarations.forEach((declaration) => {
         if (!declaration.init) return; // Skip uninitialized variables
 
@@ -157,6 +158,18 @@ function checkFile(filename, options = {}) {
             actualType = "undefined";
           }
 
+          if (
+            kind === "const" &&
+            (actualType === "array" || actualType === "object")
+          ) {
+            variableMap.set(varName, {
+              type: expectedType,
+              actualType: actualType,
+              value: typeValue,
+              isComplex: isComplex,
+            });
+          }
+
           // Compare types
           if (
             !isComplexTypeMatch(
@@ -176,6 +189,11 @@ function checkFile(filename, options = {}) {
             );
             typeErrors++;
           }
+          // Store variable information in the map
+          variableMap.set(varName, {
+            type: expectedType,
+            actualType: actualType,
+          });
         }
       });
     },
@@ -188,24 +206,16 @@ function checkFile(filename, options = {}) {
         return; // Skip if after the skip-remaining comment
       }
 
-      // Check type for assignments like: x = value; (where x has a type annotation)
       if (t.isIdentifier(path.node.left)) {
         const varName = path.node.left.name;
-        let expectedType, actualType;
-        let isComplex = false;
-        // Extract comment from the assignment
-        const assignmentComment = findTypeAnnotationInAssignment(
-          code,
-          path.node
-        );
 
-        if (assignmentComment) {
+        // Check if the variable is in the map
+        if (variableMap.has(varName)) {
           typeChecksPerformed++;
-          ({ expectedType, isComplex } =
-            parseTypeAnnotation(assignmentComment));
-          actualType = "unknown";
+          const variableInfo = variableMap.get(varName);
+          const expectedType = variableInfo.type;
+          let actualType;
 
-          // Determine the actual type
           if (t.isStringLiteral(path.node.right)) {
             actualType = "string";
           } else if (t.isNumericLiteral(path.node.right)) {
@@ -217,25 +227,17 @@ function checkFile(filename, options = {}) {
           } else if (t.isObjectExpression(path.node.right)) {
             actualType = "object";
           } else if (t.isArrayExpression(path.node.right)) {
-            actualType = isComplex
-              ? checkArrayType(path.node.right, expectedType)
-              : "array";
+            actualType = "array";
           } else if (
             t.isFunctionExpression(path.node.right) ||
             t.isArrowFunctionExpression(path.node.right)
           ) {
             actualType = "function";
+          } else {
+            actualType = "unknown";
           }
 
-          // Compare types
-          if (
-            !isComplexTypeMatch(
-              expectedType,
-              actualType,
-              path.node.right,
-              isComplex
-            )
-          ) {
+          if (expectedType !== actualType) {
             const errorLocation = getLocationInfo(filename, path.node);
             console.log(chalk.red(`❌ Type mismatch at ${errorLocation}:`));
             console.log(
