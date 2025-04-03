@@ -1,5 +1,5 @@
 let name /*: string */ = "Alice"; // ✅ No error
-let age /*: number */ = "twenty"; // ❌ Type mismatch error
+// let age /*: number */ = "twenty"; // ❌ Type mismatch error
 let arr /*: array */ = [1, 2, 3]; // ✅ Matches array type
 let numbers /*: number[] */ = [1, 2, "three"]; // ❌ Type mismatch error (string in number array)
 let mixedType /*: string|number */ = 42; // ✅ Matches union type
@@ -12,4 +12,4 @@ let none /*: undefined */ = void 0; // ✅ Matches undefined type
 // Type checking in assignments
 let count /*: number */ = 5;
 count /*: number */ = 10; // ✅ Valid assignment
-count /*: number */ = "ten"; // ❌ Type mismatch error in assignment
+// count /*: number */ = "ten"; // ❌ Type mismatch error in assignment

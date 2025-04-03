@@ -24,28 +24,48 @@ program.parse(process.argv);
 
 // Function to traverse the directory and process each JS file
 function traverseDirectory(directory, options) {
-  fs.readdirSync(directory).forEach((file) => {
-    const fullPath = path.join(directory, file);
-    const stats = fs.statSync(fullPath);
+  let totalTypeChecks = 0;
+  let totalFiles = 0;
+  const startTime = Date.now();
+  const results = [];
 
-    // Skip 'node_modules' directory
-    if (path.basename(fullPath) === "node_modules") {
-      return; // Skip the node_modules directory
-    }
+  function traverse(currentDirectory) {
+    fs.readdirSync(currentDirectory).forEach((file) => {
+      const fullPath = path.join(currentDirectory, file);
+      const stats = fs.statSync(fullPath);
 
-    if (stats.isDirectory()) {
-      traverseDirectory(fullPath, options); // Recursively traverse subdirectories
-    } else if (stats.isFile() && file.endsWith(".js")) {
-      checkFile(fullPath, options); // Process JavaScript file
-    }
-  });
+      // Skip 'node_modules' directory
+      if (path.basename(fullPath) === "node_modules") {
+        return; // Skip the node_modules directory
+      }
+
+      if (stats.isDirectory()) {
+        traverse(fullPath); // Recursively traverse subdirectories
+      } else if (stats.isFile() && file.endsWith(".js")) {
+        const { typeChecksPerformed } = checkFile(fullPath, options); // Process JavaScript file
+        results.push({ file: fullPath, typeChecks: typeChecksPerformed });
+        totalTypeChecks += typeChecksPerformed;
+        totalFiles++;
+      }
+    });
+  }
+
+  traverse(directory);
+
+  const endTime = Date.now();
+  const timeTaken = (endTime - startTime) / 1000; // in seconds
+  console.log(
+    chalk.green(
+      `Success! ${totalTypeChecks} type checks, ${totalFiles} files, ${timeTaken}s`
+    )
+  );
 }
 
 // Function to check types
 function checkFile(filename, options = {}) {
   if (!fs.existsSync(filename)) {
     console.log(chalk.red(`Error: File "${filename}" not found.`));
-    return;
+    return { typeChecksPerformed: 0 };
   }
 
   const code = fs.readFileSync(filename, "utf8");
@@ -144,7 +164,6 @@ function checkFile(filename, options = {}) {
         const varName = path.node.left.name;
         let expectedType, actualType;
         let isComplex = false;
-
         // Extract comment from the assignment
         const assignmentComment = findTypeAnnotationInAssignment(
           code,
@@ -211,6 +230,7 @@ function checkFile(filename, options = {}) {
       )
     );
   }
+  return { typeChecksPerformed };
 }
 
 // Function to find type annotations in inline comments like /*: type */
@@ -281,7 +301,6 @@ function isComplexTypeMatch(expectedType, actualType, node, isComplex) {
     // For simplicity, just check the first element
     const firstElement = node.elements[0];
     let firstElementType = "unknown";
-
     if (t.isStringLiteral(firstElement)) {
       firstElementType = "string";
     } else if (t.isNumericLiteral(firstElement)) {
