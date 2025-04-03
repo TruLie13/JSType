@@ -1,2 +1,2 @@
 let validString /*: string */ = "valid"; // ✅ No error
-let isValid /*: boolean */ = true; // ❌ Type mismatch error
+let isValid = "true"; // ❌ Type mismatch error

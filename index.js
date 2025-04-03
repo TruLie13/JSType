@@ -28,6 +28,11 @@ function traverseDirectory(directory, options) {
     const fullPath = path.join(directory, file);
     const stats = fs.statSync(fullPath);
 
+    // Skip 'node_modules' directory
+    if (path.basename(fullPath) === "node_modules") {
+      return; // Skip the node_modules directory
+    }
+
     if (stats.isDirectory()) {
       traverseDirectory(fullPath, options); // Recursively traverse subdirectories
     } else if (stats.isFile() && file.endsWith(".js")) {
