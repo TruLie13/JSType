@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-
+/*: skip */
 import fs from "fs";
 import path from "path";
 import { program } from "commander";
@@ -84,11 +84,23 @@ function checkFile(filename, options = {}) {
     return { typeChecksPerformed: 0, skipped: true };
   }
 
+  // Check for /*: skip-remaining */ comment and get its location if it exists
+  const skipRemainingLocation = getSkipRemainingLocation(code);
+
   let typeErrors = 0;
   let typeChecksPerformed = 0;
+  let skipRemaining = false; // Flag to skip remaining checks
 
-  traverse(ast, {
+  const visitor = {
     VariableDeclaration(path) {
+      // Check if we should skip this node based on its location
+      if (
+        skipRemainingLocation &&
+        path.node.loc.start.line > skipRemainingLocation
+      ) {
+        return; // Skip if after the skip-remaining comment
+      }
+
       const { declarations } = path.node;
       declarations.forEach((declaration) => {
         if (!declaration.init) return; // Skip uninitialized variables
@@ -167,6 +179,14 @@ function checkFile(filename, options = {}) {
       });
     },
     AssignmentExpression(path) {
+      // Check if we should skip this node based on its location
+      if (
+        skipRemainingLocation &&
+        path.node.loc.start.line > skipRemainingLocation
+      ) {
+        return; // Skip if after the skip-remaining comment
+      }
+
       // Check type for assignments like: x = value; (where x has a type annotation)
       if (t.isIdentifier(path.node.left)) {
         const varName = path.node.left.name;
@@ -226,7 +246,9 @@ function checkFile(filename, options = {}) {
         }
       }
     },
-  });
+  };
+
+  traverse(ast, visitor);
 
   if (typeErrors > 0) {
     console.log(chalk.red(`Found ${typeErrors} type error(s) in ${filename}`));
@@ -237,6 +259,11 @@ function checkFile(filename, options = {}) {
         `Checked ${filename} successfully! (${typeChecksPerformed} type checks performed)`
       )
     );
+    if (skipRemainingLocation) {
+      console.log(
+        chalk.yellow(`Note: Partially checked due to skip-remaining comment.`)
+      );
+    }
   }
   return { typeChecksPerformed, skipped: false };
 }
@@ -247,6 +274,20 @@ function hasSkipComment(comments) {
     return false;
   }
   return comments.some((comment) => comment.value.trim() === ": skip");
+}
+
+// Function to find the line number of a /*: skip-remaining */ comment
+function getSkipRemainingLocation(code) {
+  const lines = code.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    if (
+      lines[i].includes("/*: skip-remaining */") ||
+      lines[i].includes("/* : skip-remaining */")
+    ) {
+      return i + 1; // Line numbers are 1-based
+    }
+  }
+  return null;
 }
 
 // Function to find type annotations in inline comments like /*: type */

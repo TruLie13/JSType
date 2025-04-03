@@ -6,7 +6,8 @@ let mixedType /*: string|number */ = 42; // ✅ Matches union type
 let person /*: object */ = { name: "Bob", age: 30 }; // ✅ Matches object type
 let greeting /*: function */ = () => console.log("Hello"); // ✅ Matches function type
 let isValid /*: boolean */ = "true"; // ❌ Type mismatch error (string, not boolean)
-/*: skip */
+let isValid1 /*: boolean */ = "true"; // ❌ Type mismatch error (string, not boolean)
+/*: skip-remaining */
 let empty /*: null */ = null; // ✅ Matches null type
 let none /*: undefined */ = void 0; // ✅ Matches undefined type
 
