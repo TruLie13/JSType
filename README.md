@@ -4,18 +4,15 @@ JSType is a lightweight type checker for JavaScript, designed to help you catch 
 
 ## Features
 
-- 📝 **Non-intrusive type checking** - Add types via comments in your regular JavaScript code
-- 🔄 **No build step required** - Unlike TypeScript, works directly with vanilla JS
-- ✅ **Gradual adoption** - Add type checking incrementally to existing projects
-- 🔍 **Rich type support** - Handles primitive types, arrays, unions, and more
+- 📝 **Non-intrusive type checking** - Uses intuitive inline comment syntax for declaring types.
+- 🔄 **No build step required** - Just install and link the CLI tool (*no need to change file extensions or refactor code*).
+- ✅ **Gradual adoption** - Adopt type checking in stages. You can apply types to entire files or parts of files (*great for legacy projects*).
+- ⚡ **Performance-Oriented** - Includes support for skipping files or file segments with special comments.
+- 🔍 **Rich type support** - Handles primitive types, arrays, unions, and more.
 
 ## Installation
 
 ```bash
-# Install globally from npm
-npm install -g jstype
-
-# Or clone and install locally
 git clone https://github.com/your-username/JSType.git
 cd JSType
 npm install
@@ -64,15 +61,17 @@ count /*: number */ = 10; // Type checked at assignment
 - Array types: `type[]` (e.g., `string[]`, `number[]`)
 - Union types: `type1|type2` (e.g., `string|number`)
 
-## Error Reporting
+## Results Reported
 
 JSType provides clear error messages when type mismatches are detected:
 
-```
-❌ Type mismatch at test.js:2:24:
-  Variable: age
-  Expected: number, Found: string ("twenty")
-```
+### Error example
+<img width="792" alt="image" src="https://github.com/user-attachments/assets/bbee5e5d-3c95-44c5-b1f8-361309c1bfbb" />
+
+### Success example
+ <img width="961" alt="image" src="https://github.com/user-attachments/assets/a8c3532b-3679-4817-8492-2fa4e722051d" />
+
+
 
 ## Contributing
 
@@ -84,8 +83,9 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Roadmap
 
-- [ ] Add support for interface and custom type definitions
-- [ ] Add configuration options for strict/loose mode
-- [ ] Create VS Code extension for inline type checking
-- [ ] Add support for generics and more complex type patterns
-- [ ] Improve type inference for better error reporting
+- [ ] Add type check for function variables
+- [ ] Add type check for component props
+- [ ] Add type check for local imports
+- [ ] Convert to package so it can be installed globally with npm
+- [ ] Memory Management - garbage colleting
+
