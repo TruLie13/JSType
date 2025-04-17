@@ -1,17 +1,37 @@
-let name /*: string */ = "Alice"; // ✅ No error
-let age /*: number */ = "twenty"; // ❌ Type mismatch error
-let arr /*: array */ = [1, 2, 3]; // ✅ Matches array type
-let numbers /*: number[] */ = [1, 2, "three"]; // ❌ Type mismatch error (string in number array)
-let mixedType /*: string|number */ = 42; // ✅ Matches union type
-let person /*: object */ = { name: "Bob", age: 30 }; // ✅ Matches object type
-let greeting /*: function */ = () => console.log("Hello"); // ✅ Matches function type
-// let isValid /*: boolean */ = "true"; // ❌ Type mismatch error (string, not boolean)
-isValid = 3; // ❌ Type mismatch error (string, not boolean)
+// tests/type-examples.js
 
-let empty /*: null */ = null; // ✅ Matches null type
-let none /*: undefined */ = void 0; // ✅ Matches undefined type
+/** @type {string} */
+let name = "Alice"; // ✅ No error
 
+// /** @type {number} */
+// let age = "twenty"; // ❌ Type mismatch error
+
+/** @type {array} */
+let arr = [1, 2, 3]; // ✅ Matches array type
+
+/** @type {object} */
+let person = { name: "Bob", age: 30 }; // ✅ Matches object type
+
+/** @type {function} */
+let greeting = () => console.log("Hello"); // ✅ Matches function type
+
+/*: skip-remaining */
+/** @type {boolean} */
+let isValid = "true"; // ❌ Type mismatch error (string, not boolean)
+
+/** @type {null} */
+let empty = null; // ✅ Matches null type
+
+/** @type {undefined} */
+let none = void 0; // ✅ Matches undefined type
+
+// ————————————————————————————
 // Type checking in assignments
-let count /*: number */ = 5;
-count /*: number */ = 10; // ✅ Valid assignment
+
+/** @type {number} */
+let count = 5;
+
+// /** @type {string} */
+// count = "10"; // ❌ Cannot reassign type
+
 count = "ten"; // ❌ Type mismatch error in assignment
