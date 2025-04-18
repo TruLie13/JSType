@@ -1,5 +1,5 @@
 {
-  "name": "jstype",
+  "name": "jstype-cli",
   "version": "1.0.0",
   "description": "CLI tool to statically type-check JavaScript via JSDoc annotations",
   "main": "index.js",

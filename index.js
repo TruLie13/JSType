@@ -1,21 +1,20 @@
 #!/usr/bin/env node
 /*: skip */
-import fs from "fs";
-import path from "path";
-import { program } from "commander";
 import parser from "@babel/parser";
 import traverseModule from "@babel/traverse";
 import * as t from "@babel/types";
 import chalk from "chalk";
+import { program } from "commander";
+import fs from "fs";
+import path from "path";
+import pkg from "./package.json" assert { type: "json" };
 
 const traverse = traverseModule.default;
 
 // CLI setup
 program
-  .version("1.0.0")
-  .description(
-    "JSType: A lightweight type-checker for JavaScript using JSDoc annotations"
-  )
+  .version(pkg.version)
+  .description(pkg.description)
   .argument("<file>", "JavaScript file or directory to check")
   .option("-v, --verbose", "Show detailed type information")
   .action((file, options) => {
