@@ -1,0 +1,10 @@
+.git/
+node_modules/
+src/
+docs/
+package-lock.json
+
+# tests
+file1.js
+test.js
+folder ex/

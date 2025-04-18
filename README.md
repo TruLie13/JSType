@@ -12,6 +12,14 @@ JSType is a lightweight type checker for JavaScript, designed to help you catch 
 
 ## Installation
 
+### Global Install
+
+```bash
+npm install -g jstype-cli
+```
+
+### Local Development / Testing
+
 ```bash
 git clone https://github.com/your-username/JSType.git
 cd JSType

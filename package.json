@@ -1,22 +1,32 @@
 {
-  "name": "jstype-cli",
+  "name": "jstype",
   "version": "1.0.0",
+  "description": "CLI tool to statically type-check JavaScript via JSDoc annotations",
   "main": "index.js",
+  "bin": {
+    "jstype": "./index.js"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
+  "keywords": [
+    "jsdoc",
+    "type-checker",
+    "cli",
+    "javascript",
+    "babel"
+  ],
   "author": "",
-  "license": "ISC",
-  "description": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14"
+  },
   "dependencies": {
     "@babel/parser": "^7.27.0",
     "@babel/traverse": "^7.27.0",
+    "@babel/types": "^7.27.0",
     "chalk": "^5.4.1",
     "commander": "^13.1.0"
-  },
-  "bin": {
-    "jstype": "index.js"
   },
   "type": "module"
 }
