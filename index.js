@@ -36,6 +36,26 @@ function traverseDirectory(directory, options) {
   const startTime = Date.now();
   const results = [];
 
+  // single-file support
+  try {
+    const stats = fs.statSync(directory);
+    if (stats.isFile()) {
+      const { typeChecksPerformed, skipped } = checkFile(directory, options);
+      if (!skipped) totalTypeChecks += typeChecksPerformed;
+      totalFiles = 1;
+      const timeTaken = ((Date.now() - startTime) / 1000).toFixed(2);
+      console.log(
+        chalk.green(
+          `Success! ${totalTypeChecks} type checks, ${totalFiles} file, ${timeTaken}s`
+        )
+      );
+      return;
+    }
+  } catch (err) {
+    console.log(chalk.red(`Error accessing path: ${directory}`));
+    process.exit(1);
+  }
+
   function traverseDir(current) {
     fs.readdirSync(current).forEach((file) => {
       const fullPath = path.join(current, file);

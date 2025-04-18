@@ -35,6 +35,8 @@ npm link
 jstype path/to/your/file.js
 ```
 
+#Works with path to file or entire folder
+
 ### With Verbose Output
 
 ```bash
