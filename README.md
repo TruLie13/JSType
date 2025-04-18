@@ -103,5 +103,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [ ] Add type check for function variables
 - [ ] Add type check for component props
 - [ ] Add type check for local imports
-- [ ] Convert to package so it can be installed globally with npm
+- [x] Convert to package so it can be installed globally with npm
 - [ ] Memory Management - garbage colleting
