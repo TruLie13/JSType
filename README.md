@@ -1,13 +1,13 @@
 # JSType CLI
 
-JSType is a lightweight type checker for JavaScript, designed to help you catch type errors without switching to TypeScript. It scans your JavaScript files for inline comment type annotations and verifies that variable values match their declared types.
+JSType is a lightweight type checker for JavaScript, designed to help you catch type errors without switching to TypeScript. It scans your JavaScript files for inline JSDoc comment type annotations and verifies that variable values match their declared types.
 
 ## Features
 
-- 📝 **Non-intrusive type checking** - Uses intuitive inline comment syntax for declaring types.
-- 🔄 **No build step required** - Just install and link the CLI tool (*no need to change file extensions or refactor code*).
-- ✅ **Gradual adoption** - Adopt type checking in stages. You can apply types to entire files or parts of files (*great for legacy projects*).
-- ⚡ **Performance-Oriented** - Includes support for skipping files or file segments with special comments.
+- 📝 **Non-intrusive type checking** - Uses inline JSDoc comment syntax for declaring types.
+- 🔄 **No build step required** - Just install and link the CLI tool (_no need to change file extensions or refactor code_).
+- ✅ **Gradual adoption** - Adopt type checking in stages. You can apply types to entire files or parts of files (_great for legacy projects_).
+- ⚡ **Performance-Oriented** - Includes support for skipping entire files or file segments with special comments.
 - 🔍 **Rich type support** - Handles primitive types, arrays, unions, and more.
 
 ## Installation
@@ -39,19 +39,26 @@ JSType uses inline comment annotations to specify types:
 
 ```javascript
 // Basic types
-let name /*: string */ = "Alice";
-let age /*: number */ = 30;
-let isActive /*: boolean */ = true;
+/** @type {string} */
+let name = "Alice"; // ✅ No error
 
-// Array types
-let fruits /*: string[] */ = ["apple", "banana", "orange"];
+/** @type {number} */
+let age = "twenty"; // ❌ Type mismatch error
 
-// Union types
-let id /*: string|number */ = "user123";
+/** @type {boolean} */
+let isValid = "true"; // ❌ Type mismatch error (string, not boolean)
+
+/** @type {array} */
+let arr = [1, 2, 3]; // ✅ Matches array type
 
 // Type checking in assignments
-let count /*: number */ = 5;
-count /*: number */ = 10; // Type checked at assignment
+/** @type {number} */
+let count = 5; // ✅ Matches number type
+
+/** @type {string} */
+count = "10"; // ❌ Cannot reassign type
+
+count = "ten"; // ❌ Type mismatch error in assignment
 ```
 
 ## Supported Types
@@ -66,12 +73,12 @@ count /*: number */ = 10; // Type checked at assignment
 JSType provides clear error messages when type mismatches are detected:
 
 ### Error example
+
 <img width="792" alt="image" src="https://github.com/user-attachments/assets/bbee5e5d-3c95-44c5-b1f8-361309c1bfbb" />
 
 ### Success example
+
  <img width="961" alt="image" src="https://github.com/user-attachments/assets/a8c3532b-3679-4817-8492-2fa4e722051d" />
-
-
 
 ## Contributing
 
@@ -88,4 +95,3 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [ ] Add type check for local imports
 - [ ] Convert to package so it can be installed globally with npm
 - [ ] Memory Management - garbage colleting
-

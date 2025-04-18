@@ -3,8 +3,8 @@
 /** @type {string} */
 let name = "Alice"; // ✅ No error
 
-// /** @type {number} */
-// let age = "twenty"; // ❌ Type mismatch error
+/** @type {number} */
+let age = "twenty"; // ❌ Type mismatch error
 
 /** @type {array} */
 let arr = [1, 2, 3]; // ✅ Matches array type
@@ -15,7 +15,6 @@ let person = { name: "Bob", age: 30 }; // ✅ Matches object type
 /** @type {function} */
 let greeting = () => console.log("Hello"); // ✅ Matches function type
 
-/*: skip-remaining */
 /** @type {boolean} */
 let isValid = "true"; // ❌ Type mismatch error (string, not boolean)
 
@@ -31,7 +30,7 @@ let none = void 0; // ✅ Matches undefined type
 /** @type {number} */
 let count = 5;
 
-// /** @type {string} */
-// count = "10"; // ❌ Cannot reassign type
+/** @type {string} */
+count = "10"; // ❌ Cannot reassign type
 
 count = "ten"; // ❌ Type mismatch error in assignment
