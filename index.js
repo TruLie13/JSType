@@ -7,9 +7,15 @@ import chalk from "chalk";
 import { program } from "commander";
 import fs from "fs";
 import path from "path";
-import pkg from "./package.json" assert { type: "json" };
 
 const traverse = traverseModule.default;
+
+const pkgPath = path.resolve(
+  path.dirname(new URL(import.meta.url).pathname),
+  "package.json"
+);
+
+const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
 
 // CLI setup
 program

@@ -16,7 +16,7 @@
     "javascript",
     "babel"
   ],
-  "author": "",
+  "author": "Jonathan Zayan",
   "license": "MIT",
   "engines": {
     "node": ">=14"
