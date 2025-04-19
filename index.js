@@ -106,12 +106,13 @@ function checkFile(filename, options = {}) {
     console.log(chalk.yellow(`Skipping ${filename} due to skip comment.`));
     return { typeChecksPerformed: 0, skipped: true };
   }
-  const skipLoc = getSkipRemainingLocation(code);
 
+  const skipLoc = getSkipRemainingLocation(code);
   let typeErrors = 0;
   let typeChecksPerformed = 0;
   const variableMap = new Map();
 
+  // Single pass: collect declarations and infer types immediately
   traverse(ast, {
     VariableDeclaration(path) {
       if (skipLoc && path.node.loc.start.line > skipLoc) return;
@@ -119,35 +120,42 @@ function checkFile(filename, options = {}) {
         if (!decl.init) return;
         const varName = decl.id.name;
         const typeAnnotation = findJSDocTypeAnnotation(decl, allComments);
-        if (!typeAnnotation) return;
+        const { expectedType, isComplex } = typeAnnotation
+          ? parseTypeAnnotation(typeAnnotation)
+          : { expectedType: null, isComplex: false };
 
-        typeChecksPerformed++;
-        const { expectedType, isComplex } = parseTypeAnnotation(typeAnnotation);
-        const actualType = inferType(decl.init, isComplex, expectedType);
-
-        if (
-          decl.kind === "const" &&
-          (actualType === "array" || actualType === "object")
-        ) {
-          variableMap.set(varName, {
-            type: expectedType,
-            actualType,
-            isComplex,
-          });
+        // Infer actual type, resolving identifiers via variableMap
+        let actualType;
+        if (t.isIdentifier(decl.init)) {
+          const entry = variableMap.get(decl.init.name);
+          actualType = entry ? entry.actualType : "reference";
+        } else {
+          actualType = inferType(decl.init, isComplex, expectedType);
         }
 
-        if (
-          !isComplexTypeMatch(expectedType, actualType, decl.init, isComplex)
-        ) {
-          const locStr = getLocationInfo(filename, decl);
-          console.log(chalk.red(`❌ Type mismatch at ${locStr}:`));
-          console.log(
-            `  Variable: ${varName}\n  Expected: ${expectedType}, Found: ${actualType}\n`
-          );
-          typeErrors++;
-        }
+        // Record in map: if no annotation, use actualType as type
+        const recordedType = expectedType || actualType;
+        variableMap.set(varName, { type: recordedType, actualType, isComplex });
 
-        variableMap.set(varName, { type: expectedType, actualType, isComplex });
+        // If annotated, perform check
+        if (typeAnnotation) {
+          typeChecksPerformed++;
+          if (
+            !isComplexTypeMatch(
+              expectedType.toLowerCase(),
+              actualType,
+              decl.init,
+              isComplex
+            )
+          ) {
+            const locStr = getLocationInfo(filename, decl);
+            console.log(chalk.red(`❌ Type mismatch at ${locStr}:`));
+            console.log(
+              `  Variable: ${varName}\n  Expected: ${expectedType.toLowerCase()}, Found: ${actualType}\n`
+            );
+            typeErrors++;
+          }
+        }
       });
     },
     AssignmentExpression(path) {
@@ -159,7 +167,13 @@ function checkFile(filename, options = {}) {
       typeChecksPerformed++;
       const info = variableMap.get(varName);
       const expectedType = info.type;
-      const actualType = inferType(path.node.right, false, expectedType);
+      let actualType;
+      if (t.isIdentifier(path.node.right)) {
+        const entry = variableMap.get(path.node.right.name);
+        actualType = entry ? entry.actualType : "reference";
+      } else {
+        actualType = inferType(path.node.right, false, expectedType);
+      }
 
       if (expectedType !== actualType) {
         const locStr = getLocationInfo(filename, path.node);
@@ -168,6 +182,9 @@ function checkFile(filename, options = {}) {
           `  Assignment to: ${varName}\n  Expected: ${expectedType}, Found: ${actualType}\n`
         );
         typeErrors++;
+      } else {
+        // update map
+        variableMap.set(varName, { ...info, actualType });
       }
     },
   });

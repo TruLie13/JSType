@@ -27,10 +27,15 @@ let none = void 0; // ✅ Matches undefined type
 // ————————————————————————————
 // Type checking in assignments
 
-/** @type {number} */
 let count = 5;
 
-/** @type {string} */
-count = "10"; // ❌ Cannot reassign type
-
 count = "ten"; // ❌ Type mismatch error in assignment
+
+/**
+ * @type {Function}
+ */
+const myAlias = originalFunction;
+
+const originalFunction = function () {
+  console.log("Hello");
+};
