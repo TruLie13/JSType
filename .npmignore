@@ -1,8 +1,12 @@
 .git/
+.gitignore/
 node_modules/
 src/
 docs/
 package-lock.json
+
+#error log
+jstype-errors.json
 
 # tests
 file1.js

@@ -17,6 +17,13 @@ const pkgPath = path.resolve(
 
 const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
 
+const startTime = Date.now();
+
+// helper funtion
+function formatElapsedTime(startTime) {
+  return ((Date.now() - startTime) / 1000).toFixed(2);
+}
+
 // CLI setup
 program
   .version(pkg.version)
@@ -35,7 +42,6 @@ function traverseDirectory(directory, options) {
   let totalTypeChecks = 0;
   let totalFiles = 0;
   let errorLog = [];
-  const startTime = Date.now();
 
   // single-file support
   try {
@@ -52,14 +58,14 @@ function traverseDirectory(directory, options) {
         }
       }
       totalFiles = 1;
-      const timeTaken = ((Date.now() - startTime) / 1000).toFixed(2);
+      const elapsedTime = formatElapsedTime(startTime);
 
       if (options.full) {
         writeFullReport(totalTypeChecks, totalFiles, errorLog);
       } else {
         console.log(
           chalk.green(
-            `Success! ${totalTypeChecks} type checks, ${totalFiles} file, ${timeTaken}s`
+            `Success! ${totalTypeChecks} type checks, ${totalFiles} file, duration: ${elapsedTime}s`
           )
         );
       }
@@ -100,12 +106,10 @@ function traverseDirectory(directory, options) {
   if (options.full) {
     writeFullReport(totalTypeChecks, totalFiles, errorLog);
   } else {
-    const endTime = Date.now();
+    const elapsedTime = formatElapsedTime(startTime);
     console.log(
       chalk.green(
-        `Success! ${totalTypeChecks} type checks, ${totalFiles} files, ${
-          (endTime - startTime) / 1000
-        }s`
+        `Success! ${totalTypeChecks} type checks, ${totalFiles} files, duration: ${elapsedTime}s`
       )
     );
   }
@@ -117,11 +121,12 @@ function writeFullReport(totalChecks, totalFiles, errorLog) {
   const filesWithErrors = errorLog.length;
   const reportPath = path.resolve(process.cwd(), "jstype-errors.json");
   fs.writeFileSync(reportPath, JSON.stringify(errorLog, null, 2));
+  const elapsedTime = formatElapsedTime(startTime);
 
   if (totalErrors > 0) {
     console.log(
       chalk.red(
-        `Found ${totalErrors} type error(s) in ${filesWithErrors} files — see ${path.basename(
+        `Found ${totalErrors} type error(s) in ${filesWithErrors} files, duration: ${elapsedTime}s — see ${path.basename(
           reportPath
         )} for details`
       )
@@ -130,7 +135,7 @@ function writeFullReport(totalChecks, totalFiles, errorLog) {
   } else {
     console.log(
       chalk.green(
-        `Success! ${totalChecks} type checks, ${totalFiles} files, no errors found.`
+        `Success! ${totalChecks} type checks, ${totalFiles} files, duration: ${elapsedTime}s - no errors found.`
       )
     );
   }

@@ -1,4 +1,4 @@
-// tests/type-examples.js
+/*: skip */
 
 /** @type {string} */
 let name = "Alice"; // ✅ No error
