@@ -43,8 +43,8 @@ jstype <path> [options]
 
 ### Options
 
-~ [-i, --infer] - Enable type inference when JSDoc not present
-~ [--full] - Full multi-file report with JSON error log
+- [-i, --infer] - Enable type inference when JSDoc not present
+- [--full] - Full multi-file report with JSON error log
 
 ## Type Annotations
 
