@@ -22,8 +22,8 @@ program
   .version(pkg.version)
   .description(pkg.description)
   .argument("<file>", "JavaScript file or directory to check")
-  .option("-v, --verbose", "Show detailed type information")
   .option("-i, --infer", "Enable type inference when JSDoc not present")
+  .option("--full", "Enable full multi-file reporting with JSON error log")
   .action((file, options) => {
     traverseDirectory(file, options);
   });
@@ -34,22 +34,35 @@ program.parse(process.argv);
 function traverseDirectory(directory, options) {
   let totalTypeChecks = 0;
   let totalFiles = 0;
+  let errorLog = [];
   const startTime = Date.now();
-  const results = [];
 
   // single-file support
   try {
     const stats = fs.statSync(directory);
     if (stats.isFile()) {
-      const { typeChecksPerformed, skipped } = checkFile(directory, options);
-      if (!skipped) totalTypeChecks += typeChecksPerformed;
+      const { typeChecksPerformed, skipped, errors } = checkFile(
+        directory,
+        options
+      );
+      if (!skipped) {
+        totalTypeChecks += typeChecksPerformed;
+        if (options.full && errors.length) {
+          errorLog.push({ file: directory, errors });
+        }
+      }
       totalFiles = 1;
       const timeTaken = ((Date.now() - startTime) / 1000).toFixed(2);
-      console.log(
-        chalk.green(
-          `Success! ${totalTypeChecks} type checks, ${totalFiles} file, ${timeTaken}s`
-        )
-      );
+
+      if (options.full) {
+        writeFullReport(totalTypeChecks, totalFiles, errorLog);
+      } else {
+        console.log(
+          chalk.green(
+            `Success! ${totalTypeChecks} type checks, ${totalFiles} file, ${timeTaken}s`
+          )
+        );
+      }
       return;
     }
   } catch (err) {
@@ -57,20 +70,25 @@ function traverseDirectory(directory, options) {
     process.exit(1);
   }
 
+  // directory support
   function traverseDir(current) {
     fs.readdirSync(current).forEach((file) => {
       const fullPath = path.join(current, file);
       const stats = fs.statSync(fullPath);
 
-      if (path.basename(fullPath) === "node_modules") return;
-
       if (stats.isDirectory()) {
+        if (path.basename(fullPath) === "node_modules") return;
         traverseDir(fullPath);
       } else if (stats.isFile() && file.endsWith(".js")) {
-        const { typeChecksPerformed, skipped } = checkFile(fullPath, options);
+        const { typeChecksPerformed, skipped, errors } = checkFile(
+          fullPath,
+          options
+        );
         if (!skipped) {
-          results.push({ file: fullPath, typeChecks: typeChecksPerformed });
           totalTypeChecks += typeChecksPerformed;
+          if (options.full && errors.length) {
+            errorLog.push({ file: fullPath, errors });
+          }
         }
         totalFiles++;
       }
@@ -78,21 +96,51 @@ function traverseDirectory(directory, options) {
   }
 
   traverseDir(directory);
-  const endTime = Date.now();
-  console.log(
-    chalk.green(
-      `Success! ${totalTypeChecks} type checks, ${totalFiles} files, ${
-        (endTime - startTime) / 1000
-      }s`
-    )
-  );
+
+  if (options.full) {
+    writeFullReport(totalTypeChecks, totalFiles, errorLog);
+  } else {
+    const endTime = Date.now();
+    console.log(
+      chalk.green(
+        `Success! ${totalTypeChecks} type checks, ${totalFiles} files, ${
+          (endTime - startTime) / 1000
+        }s`
+      )
+    );
+  }
+}
+
+// Generate full report
+function writeFullReport(totalChecks, totalFiles, errorLog) {
+  const totalErrors = errorLog.reduce((sum, f) => sum + f.errors.length, 0);
+  const filesWithErrors = errorLog.length;
+  const reportPath = path.resolve(process.cwd(), "jstype-errors.json");
+  fs.writeFileSync(reportPath, JSON.stringify(errorLog, null, 2));
+
+  if (totalErrors > 0) {
+    console.log(
+      chalk.red(
+        `Found ${totalErrors} type error(s) in ${filesWithErrors} files — see ${path.basename(
+          reportPath
+        )} for details`
+      )
+    );
+    process.exit(1);
+  } else {
+    console.log(
+      chalk.green(
+        `Success! ${totalChecks} type checks, ${totalFiles} files, no errors found.`
+      )
+    );
+  }
 }
 
 // Check types in a single file
 function checkFile(filename, options = {}) {
   if (!fs.existsSync(filename)) {
     console.log(chalk.red(`Error: File "${filename}" not found.`));
-    return { typeChecksPerformed: 0, skipped: false };
+    return { typeChecksPerformed: 0, skipped: false, errors: [] };
   }
 
   const code = fs.readFileSync(filename, "utf8");
@@ -105,15 +153,15 @@ function checkFile(filename, options = {}) {
 
   if (hasSkipComment(allComments)) {
     console.log(chalk.yellow(`Skipping ${filename} due to skip comment.`));
-    return { typeChecksPerformed: 0, skipped: true };
+    return { typeChecksPerformed: 0, skipped: true, errors: [] };
   }
 
   const skipLoc = getSkipRemainingLocation(code);
   let typeErrors = 0;
   let typeChecksPerformed = 0;
   const variableMap = new Map();
+  const errors = [];
 
-  // Single pass: collect declarations and infer types immediately
   traverse(ast, {
     VariableDeclaration(path) {
       if (skipLoc && path.node.loc.start.line > skipLoc) return;
@@ -125,7 +173,6 @@ function checkFile(filename, options = {}) {
           ? parseTypeAnnotation(typeAnnotation)
           : { expectedType: null, isComplex: false };
 
-        // Infer actual type, resolving identifiers via variableMap
         let actualType;
         if (t.isIdentifier(decl.init)) {
           const entry = variableMap.get(decl.init.name);
@@ -143,22 +190,28 @@ function checkFile(filename, options = {}) {
           });
         }
 
-        // If annotated, perform check
         if (typeAnnotation) {
           typeChecksPerformed++;
-          if (
-            !isComplexTypeMatch(
-              expectedType.toLowerCase(),
-              actualType,
-              decl.init,
-              isComplex
-            )
-          ) {
+          const match = isComplexTypeMatch(
+            expectedType.toLowerCase(),
+            actualType,
+            decl.init,
+            isComplex
+          );
+          if (!match) {
             const locStr = getLocationInfo(filename, decl);
-            console.log(chalk.red(`❌ Type mismatch at ${locStr}:`));
-            console.log(
-              `  Variable: ${varName}\n  Expected: ${expectedType.toLowerCase()}, Found: ${actualType}\n`
-            );
+            if (!options.full) {
+              console.log(chalk.red(`❌ Type mismatch at ${locStr}:`));
+              console.log(
+                `  Variable: ${varName}\n  Expected: ${expectedType.toLowerCase()}, Found: ${actualType}\n`
+              );
+            }
+            errors.push({
+              loc: locStr,
+              variable: varName,
+              expected: expectedType.toLowerCase(),
+              found: actualType,
+            });
             typeErrors++;
           }
         }
@@ -183,42 +236,54 @@ function checkFile(filename, options = {}) {
 
       if (expectedType !== actualType) {
         const locStr = getLocationInfo(filename, path.node);
-        console.log(chalk.red(`❌ Type mismatch at ${locStr}:`));
-        console.log(
-          `  Assignment to: ${varName}\n  Expected: ${expectedType}, Found: ${actualType}\n`
-        );
+        if (!options.full) {
+          console.log(chalk.red(`❌ Type mismatch at ${locStr}:`));
+          console.log(
+            `  Assignment to: ${varName}\n  Expected: ${expectedType}, Found: ${actualType}\n`
+          );
+        }
+        errors.push({
+          loc: locStr,
+          variable: varName,
+          expected: expectedType,
+          found: actualType,
+        });
         typeErrors++;
       } else {
-        // update map
         variableMap.set(varName, { ...info, actualType });
       }
     },
   });
 
   if (typeErrors > 0) {
-    console.log(chalk.red(`Found ${typeErrors} type error(s) in ${filename}`));
-    process.exit(1);
-  } else {
-    console.log(
-      chalk.green(
-        `Checked ${filename} successfully! (${typeChecksPerformed} type checks performed)`
-      )
-    );
-    if (skipLoc)
+    if (!options.full) {
       console.log(
-        chalk.yellow(`Note: Partially checked due to skip-remaining comment.`)
+        chalk.red(`Found ${typeErrors} type error(s) in ${filename}`)
       );
+      process.exit(1);
+    }
+  } else {
+    if (!options.full) {
+      console.log(
+        chalk.green(
+          `Checked ${filename} successfully! (${typeChecksPerformed} type checks performed)`
+        )
+      );
+      if (skipLoc)
+        console.log(
+          chalk.yellow(`Note: Partially checked due to skip-remaining comment.`)
+        );
+    }
   }
 
-  return { typeChecksPerformed, skipped: false };
+  return { typeChecksPerformed, skipped: false, errors };
 }
 
-// Detect skip directive
+// Helper functions (unchanged)
 function hasSkipComment(comments) {
   return comments.some((c) => c.value.trim() === ": skip");
 }
 
-// Find skip-remaining location
 function getSkipRemainingLocation(code) {
   const lines = code.split("\n");
   for (let i = 0; i < lines.length; i++) {
@@ -227,7 +292,6 @@ function getSkipRemainingLocation(code) {
   return null;
 }
 
-// Locate JSDoc @type just above the declaration
 function findJSDocTypeAnnotation(node, allComments) {
   const leading = node.leadingComments || [];
   const lineStart = node.loc.start.line;
@@ -245,7 +309,6 @@ function findJSDocTypeAnnotation(node, allComments) {
   return null;
 }
 
-// Parse type annotation
 function parseTypeAnnotation(typeAnnotation) {
   return {
     expectedType: typeAnnotation.toLowerCase(),
@@ -253,7 +316,6 @@ function parseTypeAnnotation(typeAnnotation) {
   };
 }
 
-// Infer actual type
 function inferType(node, isComplex, expectedType) {
   if (t.isStringLiteral(node)) return "string";
   if (t.isNumericLiteral(node)) return "number";
@@ -269,7 +331,6 @@ function inferType(node, isComplex, expectedType) {
   return "unknown";
 }
 
-// Match complex types
 function isComplexTypeMatch(expectedType, actualType, node, isComplex) {
   if (!isComplex) return expectedType === actualType;
   if (expectedType.endsWith("[]")) {
@@ -285,18 +346,15 @@ function isComplexTypeMatch(expectedType, actualType, node, isComplex) {
       : "unknown";
     return expectedType.slice(0, -2) === elemType;
   }
-  if (expectedType.includes("|")) {
+  if (expectedType.includes("|"))
     return expectedType.split("|").includes(actualType);
-  }
   return false;
 }
 
-// Return expected array type
 function checkArrayType(node, expectedType) {
   return expectedType;
 }
 
-// Format location string
 function getLocationInfo(filename, node) {
   const rel = path.relative(process.cwd(), filename);
   return `${rel}:${node.loc.start.line}:${node.loc.start.column + 1}`;
