@@ -31,11 +31,14 @@ let count = 5;
 
 count = "ten"; // ❌ Type mismatch error in assignment
 
-/**
- * @type {Function}
- */
-const myAlias = originalFunction;
+// ———————————————————————————
+// Type checking in function parameters
 
 const originalFunction = function () {
   console.log("Hello");
 };
+
+/**
+ * @type {Function}
+ */
+const myAlias = originalFunction;

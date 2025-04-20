@@ -23,6 +23,7 @@ program
   .description(pkg.description)
   .argument("<file>", "JavaScript file or directory to check")
   .option("-v, --verbose", "Show detailed type information")
+  .option("-i, --infer", "Enable type inference when JSDoc not present")
   .action((file, options) => {
     traverseDirectory(file, options);
   });
@@ -133,9 +134,14 @@ function checkFile(filename, options = {}) {
           actualType = inferType(decl.init, isComplex, expectedType);
         }
 
-        // Record in map: if no annotation, use actualType as type
-        const recordedType = expectedType || actualType;
-        variableMap.set(varName, { type: recordedType, actualType, isComplex });
+        if (options.infer || typeAnnotation) {
+          const recordedType = expectedType || actualType;
+          variableMap.set(varName, {
+            type: recordedType,
+            actualType,
+            isComplex,
+          });
+        }
 
         // If annotated, perform check
         if (typeAnnotation) {
