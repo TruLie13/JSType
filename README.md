@@ -1,6 +1,6 @@
 # JSType CLI
 
-| v1.1
+| v1.2
 
 JSType is a lightweight type checker for JavaScript, designed to help you catch type errors without switching to TypeScript. It scans your JavaScript files for inline JSDoc comment type annotations and verifies that variable values match their declared types.
 
@@ -13,6 +13,12 @@ JSType is a lightweight type checker for JavaScript, designed to help you catch 
 - ⚡ **Performance-Oriented** - Skip files or file segments with special comments (/_: skip _/, /_: skip-remaining _/).
 - 📑 **Full project report (--full)** – Generate a JSON error log (jstype-errors.json) and summary for multi-file scans.
 - 🔍 **Rich type support** - Handles primitive types, arrays, unions, and more.
+  - Primitive: `string`, `number`, `boolean`, `null`, `undefined`  
+  - Complex: `object`, `array`, `function`  
+  - Array types: `type[]` (e.g. `string[]`)  
+  - Union types: `type1|type2` (e.g. `string|number`)  
+  - **Function returns**: `@returns` annotations drive return‑type inference  
+  - **Function parameters**: `@param` annotations validate call‑site arguments
 
 ## Installation
 
@@ -43,13 +49,12 @@ jstype <path> [options]
 
 ### Options
 
-- [-i, --infer] - Enable type inference when JSDoc not present
-- [--full] - Full multi-file report with JSON error log
+- [-i, --infer] - Enable type inference when JSDoc not present (reveals gaps in @type/@returns coverage).
+- [--full] - Full multi‑file report with JSON error log (jstype-errors.json) and summary.
 
 ## Type Annotations
 
-JSType uses inline comment annotations to specify types:
-
+### Variables
 ```javascript
 // Basic types
 /** @type {string} */
@@ -63,8 +68,10 @@ let isValid = "true"; // ❌ Type mismatch error (string, not boolean)
 
 /** @type {array} */
 let arr = [1, 2, 3]; // ✅ Matches array type
+```
 
-// Type checking in assignments
+### Assignments
+```javascript
 /** @type {number} */
 let count = 5; // ✅ Matches number type
 
@@ -74,12 +81,34 @@ count = "10"; // ❌ Cannot reassign type
 count = "ten"; // ❌ Type mismatch error in assignment
 ```
 
-## Supported Types
+### Function Returns
+```javascript
+/**
+ * @returns {array<string>}
+ */
+function getNames() {
+  return ["Alice", "Bob"];
+}
 
-- Primitive types: `string`, `number`, `boolean`, `null`, `undefined`
-- Complex types: `object`, `array`, `function`
-- Array types: `type[]` (e.g., `string[]`, `number[]`)
-- Union types: `type1|type2` (e.g., `string|number`)
+let names = getNames();      // ✅ OK
+```
+
+### Function Parameters
+```javascript
+/**
+ * Concatenates two strings.
+ * @param {string} a
+ * @param {string} b
+ * @returns {string}
+ */
+function join(a, b) {
+  return a + b;
+}
+
+let good = join("foo", "bar");   // ✅ OK
+let bad1 = join(1, "bar");       // ❌ Param mismatch
+let bad2 = join("foo", 2);       // ❌ Param mismatch
+```
 
 ## Results Reported
 
@@ -109,8 +138,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Roadmap
 
-- [ ] Add type check for function variables
-- [ ] Add type check for component props
+- [x] Add type check for function variables
+- [x] Add type check for component props
 - [ ] Add type check for local imports
 - [x] Convert to package so it can be installed globally with npm
 - [ ] Memory Management - garbage collecting
