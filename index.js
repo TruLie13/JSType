@@ -16,10 +16,12 @@ const pkgPath = path.resolve(
 );
 
 const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
-
 const startTime = Date.now();
 
-// helper funtion
+// Map to hold JSDoc @returns types for the current file
+const functionReturnMap = new Map();
+
+// helper function
 function formatElapsedTime(startTime) {
   return ((Date.now() - startTime) / 1000).toFixed(2);
 }
@@ -143,6 +145,9 @@ function writeFullReport(totalChecks, totalFiles, errorLog) {
 
 // Check types in a single file
 function checkFile(filename, options = {}) {
+  // reset return-type map for this file
+  functionReturnMap.clear();
+
   if (!fs.existsSync(filename)) {
     console.log(chalk.red(`Error: File "${filename}" not found.`));
     return { typeChecksPerformed: 0, skipped: false, errors: [] };
@@ -167,6 +172,22 @@ function checkFile(filename, options = {}) {
   const variableMap = new Map();
   const errors = [];
 
+  // 1️⃣ Pre-scan: collect @returns on function declarations
+  traverse(ast, {
+    FunctionDeclaration(path) {
+      const leading = path.node.leadingComments || [];
+      for (const c of leading) {
+        const m = c.value.match(/@returns?\s*{\s*([^}]+)\s*}/);
+        if (m) {
+          functionReturnMap.set(path.node.id.name, m[1].trim().toLowerCase());
+          break;
+        }
+      }
+    },
+    // Optionally add FunctionExpression/ArrowFunctionExpression scans here
+  });
+
+  // 2️⃣ Main pass: variables and assignments
   traverse(ast, {
     VariableDeclaration(path) {
       if (skipLoc && path.node.loc.start.line > skipLoc) return;
@@ -284,7 +305,8 @@ function checkFile(filename, options = {}) {
   return { typeChecksPerformed, skipped: false, errors };
 }
 
-// Helper functions (unchanged)
+// Helper functions (unchanged)…
+
 function hasSkipComment(comments) {
   return comments.some((c) => c.value.trim() === ": skip");
 }
@@ -322,6 +344,14 @@ function parseTypeAnnotation(typeAnnotation) {
 }
 
 function inferType(node, isComplex, expectedType) {
+  // Handle annotated function returns
+  if (t.isCallExpression(node)) {
+    const callee = node.callee;
+    if (t.isIdentifier(callee)) {
+      const ret = functionReturnMap.get(callee.name);
+      if (ret) return ret;
+    }
+  }
   if (t.isStringLiteral(node)) return "string";
   if (t.isNumericLiteral(node)) return "number";
   if (t.isBooleanLiteral(node)) return "boolean";
