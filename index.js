@@ -14,12 +14,12 @@ const pkgPath = path.resolve(
   path.dirname(new URL(import.meta.url).pathname),
   "package.json"
 );
-
 const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
 const startTime = Date.now();
 
-// Map to hold JSDoc @returns types for the current file
+// Maps to hold JSDoc @returns and @param types for the current file
 const functionReturnMap = new Map();
+const functionParamMap = new Map();
 
 // helper function
 function formatElapsedTime(startTime) {
@@ -145,8 +145,9 @@ function writeFullReport(totalChecks, totalFiles, errorLog) {
 
 // Check types in a single file
 function checkFile(filename, options = {}) {
-  // reset return-type map for this file
+  // reset maps for this file
   functionReturnMap.clear();
+  functionParamMap.clear();
 
   if (!fs.existsSync(filename)) {
     console.log(chalk.red(`Error: File "${filename}" not found.`));
@@ -172,10 +173,11 @@ function checkFile(filename, options = {}) {
   const variableMap = new Map();
   const errors = [];
 
-  // 1️⃣ Pre-scan: collect @returns on function declarations
+  // 1️⃣ Pre‑scan: collect @returns and @param on functions
   traverse(ast, {
     FunctionDeclaration(path) {
       const leading = path.node.leadingComments || [];
+      // @returns
       for (const c of leading) {
         const m = c.value.match(/@returns?\s*{\s*([^}]+)\s*}/);
         if (m) {
@@ -183,11 +185,44 @@ function checkFile(filename, options = {}) {
           break;
         }
       }
+      // @param
+      const params = [];
+      const regex = /@param\s*{\s*([^}]+)\s*}\s*(\w+)/g;
+      for (const c of leading) {
+        let m;
+        while ((m = regex.exec(c.value))) {
+          params.push({ name: m[2], type: m[1].trim().toLowerCase() });
+        }
+      }
+      if (params.length) {
+        functionParamMap.set(path.node.id.name, params);
+      }
     },
-    // Optionally add FunctionExpression/ArrowFunctionExpression scans here
+    VariableDeclarator(path) {
+      // also capture @param on function expressions/arrow functions
+      const init = path.node.init;
+      if (
+        t.isIdentifier(path.node.id) &&
+        (t.isFunctionExpression(init) || t.isArrowFunctionExpression(init))
+      ) {
+        const name = path.node.id.name;
+        const leading = init.leadingComments || [];
+        const params = [];
+        const regex = /@param\s*{\s*([^}]+)\s*}\s*(\w+)/g;
+        let m;
+        for (const c of leading) {
+          while ((m = regex.exec(c.value))) {
+            params.push({ name: m[2], type: m[1].trim().toLowerCase() });
+          }
+        }
+        if (params.length) {
+          functionParamMap.set(name, params);
+        }
+      }
+    },
   });
 
-  // 2️⃣ Main pass: variables and assignments
+  // 2️⃣ Main pass: variables, assignments, and call argument checks
   traverse(ast, {
     VariableDeclaration(path) {
       if (skipLoc && path.node.loc.start.line > skipLoc) return;
@@ -243,6 +278,7 @@ function checkFile(filename, options = {}) {
         }
       });
     },
+
     AssignmentExpression(path) {
       if (skipLoc && path.node.loc.start.line > skipLoc) return;
       if (!t.isIdentifier(path.node.left)) return;
@@ -279,6 +315,30 @@ function checkFile(filename, options = {}) {
         variableMap.set(varName, { ...info, actualType });
       }
     },
+
+    CallExpression(path) {
+      const callee = path.node.callee;
+      if (!t.isIdentifier(callee)) return;
+      const params = functionParamMap.get(callee.name);
+      if (!params) return;
+
+      path.node.arguments.forEach((argNode, i) => {
+        const expected = params[i]?.type;
+        if (!expected) return;
+        const actual = inferType(argNode, false, expected);
+        if (actual !== expected) {
+          const loc = getLocationInfo(filename, argNode);
+          console.log(chalk.red(`❌ Param mismatch at ${loc}:`));
+          console.log(
+            `  Function: ${callee.name}\n` +
+              `  Param: ${params[i].name}\n` +
+              `  Expected: ${expected}, Found: ${actual}\n`
+          );
+          typeErrors++;
+        }
+      });
+      typeChecksPerformed += params.length;
+    },
   });
 
   if (typeErrors > 0) {
@@ -295,17 +355,18 @@ function checkFile(filename, options = {}) {
           `Checked ${filename} successfully! (${typeChecksPerformed} type checks performed)`
         )
       );
-      if (skipLoc)
+      if (skipLoc) {
         console.log(
           chalk.yellow(`Note: Partially checked due to skip-remaining comment.`)
         );
+      }
     }
   }
 
   return { typeChecksPerformed, skipped: false, errors };
 }
 
-// Helper functions (unchanged)…
+// Helper functions (unchanged)
 
 function hasSkipComment(comments) {
   return comments.some((c) => c.value.trim() === ": skip");
