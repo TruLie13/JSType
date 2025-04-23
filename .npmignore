@@ -11,4 +11,6 @@ jstype-errors.json
 # tests
 file1.js
 test.js
+testParam.js
+testReturn.js
 folder ex/
