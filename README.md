@@ -13,11 +13,11 @@ JSType is a lightweight type checker for JavaScript, designed to help you catch 
 - ⚡ **Performance-Oriented** - Skip files or file segments with special comments (/_: skip _/, /_: skip-remaining _/).
 - 📑 **Full project report (--full)** – Generate a JSON error log (jstype-errors.json) and summary for multi-file scans.
 - 🔍 **Rich type support** - Handles primitive types, arrays, unions, and more.
-  - Primitive: `string`, `number`, `boolean`, `null`, `undefined`  
-  - Complex: `object`, `array`, `function`  
-  - Array types: `type[]` (e.g. `string[]`)  
-  - Union types: `type1|type2` (e.g. `string|number`)  
-  - **Function returns**: `@returns` annotations drive return‑type inference  
+  - Primitive: `string`, `number`, `boolean`, `null`, `undefined`
+  - Complex: `object`, `array`, `function`
+  - Array types: `type[]` (e.g. `string[]`)
+  - Union types: `type1|type2` (e.g. `string|number`)
+  - **Function returns**: `@returns` annotations drive return‑type inference
   - **Function parameters**: `@param` annotations validate call‑site arguments
 
 ## Installation
@@ -31,7 +31,7 @@ npm install -g jstype-cli
 ### Local Development / Testing
 
 ```bash
-git clone https://github.com/your-username/JSType.git
+git clone https://github.com/TruLie13/JSType
 cd JSType
 npm install
 npm link
@@ -50,11 +50,12 @@ jstype <path> [options]
 ### Options
 
 - [-i, --infer] - Enable type inference when JSDoc not present (reveals gaps in @type/@returns coverage).
-- [--full] - Full multi‑file report with JSON error log (jstype-errors.json) and summary.
+- [-f, --full] - Full multi‑file report with JSON error log (jstype-errors.json) and summary.
 
 ## Type Annotations
 
 ### Variables
+
 ```javascript
 // Basic types
 /** @type {string} */
@@ -71,6 +72,7 @@ let arr = [1, 2, 3]; // ✅ Matches array type
 ```
 
 ### Assignments
+
 ```javascript
 /** @type {number} */
 let count = 5; // ✅ Matches number type
@@ -82,6 +84,7 @@ count = "ten"; // ❌ Type mismatch error in assignment
 ```
 
 ### Function Returns
+
 ```javascript
 /**
  * @returns {array<string>}
@@ -90,10 +93,11 @@ function getNames() {
   return ["Alice", "Bob"];
 }
 
-let names = getNames();      // ✅ OK
+let names = getNames(); // ✅ OK
 ```
 
 ### Function Parameters
+
 ```javascript
 /**
  * Concatenates two strings.
@@ -105,9 +109,9 @@ function join(a, b) {
   return a + b;
 }
 
-let good = join("foo", "bar");   // ✅ OK
-let bad1 = join(1, "bar");       // ❌ Param mismatch
-let bad2 = join("foo", 2);       // ❌ Param mismatch
+let good = join("foo", "bar"); // ✅ OK
+let bad1 = join(1, "bar"); // ❌ Param mismatch
+let bad2 = join("foo", 2); // ❌ Param mismatch
 ```
 
 ## Results Reported

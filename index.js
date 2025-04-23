@@ -32,7 +32,7 @@ program
   .description(pkg.description)
   .argument("<file>", "JavaScript file or directory to check")
   .option("-i, --infer", "Enable type inference when JSDoc not present")
-  .option("--full", "Enable full multi-file reporting with JSON error log")
+  .option("-f, --full", "Enable full multi-file reporting with JSON error log")
   .action((file, options) => {
     traverseDirectory(file, options);
   });
